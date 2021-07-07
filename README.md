@@ -7,7 +7,7 @@
 ### Here are some of the features
     Display a specific log file in /var/log
     Show the last n events of a specified file in /var/log
-    Basic text/keyword of filtered of events
+    Basic text/keyword filtered of events
 
 ### To Build the server
     
@@ -43,3 +43,6 @@
     change the directory to handlers
         go test -v 
 
+
+Note:
+   Giving the time constrain, I displayed the log file as is this will have performance impacts if the log file is large.  One possible implementation is to implement pagination or limit the number of log events return to the user. 

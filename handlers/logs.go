@@ -1,15 +1,17 @@
 package handlers
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os/exec"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
-	pipe "github.com/b4b4r07/go-pipe"
 	"github.com/gorilla/mux"
 )
 
@@ -25,14 +27,18 @@ func GetLogFile(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("%q not found", logFile)))
 		return
 	} else {
-		logFromCat, err := getLogEvents(emptyString, logFile, emptyString, true)
+		log, err := getAllEvents(logFile)
 		if err != nil {
+			if err.Error() == "file is empty" {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(fmt.Sprintf("%q is empty", logFile)))
+			}
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(fmt.Sprintf("not able to show log for %q", logFile)))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(logFromCat))
+		w.Write([]byte(log))
 		return
 	}
 }
@@ -48,40 +54,38 @@ func GetLogEvents(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("%q not found", logFile)))
 		return
 	}
+	numLastEvents, err := strconv.Atoi(lastNevents)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("last event is not valid"))
+		return
+	}
 
-	logFromTail, err := getLogEvents(lastNevents, logFile, filter, false)
+	log, err := getLastEvents(logFile, numLastEvents, false)
 	if err != nil {
 		if err.Error() == "exit status 1" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("no events found."))
+			w.Write([]byte("no events found"))
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(fmt.Sprintf("error getting events: %v", err)))
 		}
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(logFromTail))
-}
 
-func getLogEvents(lastNevents string, logFile string, filter string, showFile bool) (string, error) {
-	catFileCommand := exec.Command("cat", filepath.Join(logDir, logFile))
-	tailCommand := exec.Command("tail", "-n", lastNevents, filepath.Join(logDir, logFile))
-	sortCommand := exec.Command("sort", "-r")
-	filterCommand := exec.Command("grep", filter)
-	var err error
-	var b bytes.Buffer
-	if showFile {
-		err = pipe.Command(&b, catFileCommand, sortCommand)
-	} else if filter != emptyString {
-		err = pipe.Command(&b, tailCommand, sortCommand, filterCommand)
-	} else {
-		err = pipe.Command(&b, tailCommand, sortCommand)
+	if filter != emptyString {
+		log = getFilteredLog(log, filter)
+		if log == emptyString {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("no events found"))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(log))
+		return
 	}
-	if err != nil {
-		return emptyString, err
-	}
-	return b.String(), nil
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(log))
 }
 
 func findFile(searchFile string) bool {
@@ -101,4 +105,73 @@ func findFile(searchFile string) bool {
 		}
 	}
 	return false
+}
+
+func getFilteredLog(a string, filter string) string {
+	logs := strings.Split(a, "\n")
+	var newString string
+
+	for _, v := range logs {
+		if strings.Contains(v, filter) {
+			newString = newString + v + "\n"
+		}
+	}
+	return newString
+}
+
+func getLastEvents(logFile string, lastEvents int, getEverything bool) (string, error) {
+	fileHandle, err := os.Open(filepath.Join("/var/log", logFile))
+	if err != nil {
+		return emptyString, errors.New("could not open file")
+	}
+	defer fileHandle.Close()
+
+	line := emptyString
+	var cursor int64 = 0
+	stat, _ := fileHandle.Stat()
+	filesize := stat.Size()
+	if filesize == 0 {
+		return emptyString, errors.New("file is empty")
+	}
+
+	var lines string
+	lineCount := 0
+
+	for {
+		cursor -= 1
+		_, err := fileHandle.Seek(cursor, io.SeekEnd)
+		if err != nil {
+			return emptyString, err
+		}
+
+		char := make([]byte, 1)
+		_, err = fileHandle.Read(char)
+		if err != nil {
+			return emptyString, err
+		}
+
+		if cursor != -1 && (char[0] == 10 || char[0] == 13) { // start a new line
+			lineCount++
+			lines = lines + line
+			line = emptyString
+		}
+		line = fmt.Sprintf("%s%s", string(char), line) // build the line from chars
+
+		if !getEverything {
+			if lastEvents == lineCount {
+				break
+			}
+		}
+
+		if cursor == -filesize { // stop if we are at the begining
+			break
+		}
+	}
+	return lines, nil
+}
+
+func getAllEvents(logFile string) (string, error) {
+	// number of last events will be ignored
+	// when geteverything is true
+	return getLastEvents(logFile, -1, true)
 }

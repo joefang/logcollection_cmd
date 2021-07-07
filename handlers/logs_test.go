@@ -10,8 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var logSortedContent = "Jul  3 20:58:53 copper\nJul  3 20:58:40 weather\nJul  3 20:58:23 love\nJul  3 20:58:05 news\nJul  3 20:58:05 cars\nJul  3 20:57:40 sports\nJul  3 20:57:23 services\nJul  3 20:56:57 world\nJul  3 20:56:57 hello \n"
-
+var logSortedContent = "Jul  3 22:58:53 copper4\nJul  3 21:58:53 copper\nJul  3 20:59:40 weather\nJul  3 20:58:40 copper2\nJul  3 19:58:23 love \nJul  3 18:58:05 cars\nJul  3 17:58:05 news\nJul  3 16:57:40 sports\nJul  3 15:57:23 services\nJul  3 14:56:57 world\n"
 func Router(route string, f func(w http.ResponseWriter, r *http.Request)) *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc(route, f).Methods("GET")
@@ -64,14 +63,14 @@ func TestGetLogEvents(t *testing.T) {
 			name:               "expected 2 log events",
 			lastevents:         "2",
 			expectedStatusCode: http.StatusOK,
-			expectedBody:       "Jul  3 20:58:53 copper\nJul  3 20:58:40 weather\n",
+			expectedBody:       "Jul  3 22:58:53 copper4\nJul  3 21:58:53 copper\n",
 			testFile:           "test.log",
 		},
 		{
 			name:               "expected 4 log events",
 			lastevents:         "4",
 			expectedStatusCode: http.StatusOK,
-			expectedBody:       "Jul  3 20:58:53 copper\nJul  3 20:58:40 weather\nJul  3 20:58:23 love\nJul  3 20:58:05 cars\n",
+			expectedBody:       "Jul  3 22:58:53 copper4\nJul  3 21:58:53 copper\nJul  3 20:59:40 weather\nJul  3 20:58:40 copper2\n",
 			testFile:           "test.log",
 		},
 		{
@@ -109,7 +108,7 @@ func TestGetLogEvents_Filtered(t *testing.T) {
 			name:               "expected 2 log events",
 			lastevents:         "10",
 			expectedStatusCode: http.StatusOK,
-			expectedBody:       "Jul  3 20:58:05 cars\n",
+			expectedBody:       "Jul  3 18:58:05 cars\n",
 			testFile:           "test.log",
 			filter:             "car",
 		},
@@ -117,7 +116,7 @@ func TestGetLogEvents_Filtered(t *testing.T) {
 			name:               "expected 4 log events",
 			lastevents:         "10",
 			expectedStatusCode: http.StatusOK,
-			expectedBody:       "no events found.",
+			expectedBody:       "no events found",
 			testFile:           "test.log",
 			filter:             "apple",
 		},

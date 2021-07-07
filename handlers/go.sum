@@ -1,5 +1,3 @@
-github.com/b4b4r07/go-pipe v0.0.0-20191010045404-84b446f57366 h1:FVAkDbBxovi2ID0vaxY7vCGvdKASt9r0TGPM1u4YQyg=
-github.com/b4b4r07/go-pipe v0.0.0-20191010045404-84b446f57366/go.mod h1:1ymsiQNa3qebVEEVtuIdhtAXRfjO4qFCFq1bBUOT2HE=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
